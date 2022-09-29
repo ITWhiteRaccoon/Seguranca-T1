@@ -22,7 +22,7 @@ public class Program
 
     public static void Main(string[] args)
     {
-        Console.WriteLine(CalculateDistances("Dados/Textos cifrados/cipher1.txt"));
+        CalculateDistances("Dados/TextoClaro.txt");
     }
 
     public static double CalculateDistances(string fileName)
@@ -32,14 +32,12 @@ public class Program
 
         Parallel.For(0, text.Length, i => { letterFrequencies.AddOrUpdate(text[i], 1, (_, v) => v + 1); });
 
-        double sum = 0;
-        foreach (int frequency in letterFrequencies.Values)
+        var textFrequencies = new List<double>();
+        foreach (var letter in alphabet)
         {
-            sum += frequency * (frequency - 1) / ((double)text.Length * (text.Length - 1));
+            textFrequencies.Add(letterFrequencies[letter] / (double)text.Length);
+            Console.WriteLine($"{letter} - {letterFrequencies[letter] / (double)text.Length}");
         }
-
-        //double coincidenceIndex = sum / ((long)text.Length * (text.Length - 1));
-
 
         return 0;
     }

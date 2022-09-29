@@ -107,6 +107,9 @@
       <None Update="Dados\Textos cifrados\cipher31.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="Dados\TextoClaro.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
