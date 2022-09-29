@@ -1,67 +1,90 @@
 ﻿using System.Collections.Concurrent;
+using System.Text;
+using DuoVia.FuzzyStrings;
 
 namespace T1_Criptoanalise;
 
 public class Program
 {
+    class LetterFrequency : IComparable<LetterFrequency>
+    {
+        public char Letter { get; set; }
+        public int Frequency { get; set; }
+
+        public int CompareTo(LetterFrequency other)
+        {
+            return other.Frequency.CompareTo(Frequency);
+        }
+
+        public override string ToString()
+        {
+            return $"{Letter} - {Frequency}";
+        }
+    }
+
     public static string alphabet = "abcdefghijklmnopqrstuvwxyz";
 
-    public static double[] EnFreq =
-    {
-        0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015, 0.06094, 0.06966, 0.00153, 0.00772, 0.04025,
-        0.02406, 0.06749, 0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758, 0.00978, 0.0236, 0.0015,
-        0.01974, 0.00074
-    };
-
-    public static double[] PtFreq =
-    {
-        0.14634, 0.01043, 0.03882, 0.04992, 0.1257, 0.01023, 0.01303, 0.00781, 0.06186, 0.00397, 0.00015, 0.02779,
-        0.04738, 0.04446, 0.09735, 0.02523, 0.01204, 0.0653, 0.06805, 0.04336, 0.03639, 0.01575, 0.00037, 0.00253,
-        0.00006, 0.0047
-    };
+    public static string enMostFreq = "etaoinshrdlu";
+    public static string ptMostFreq = "aeosridmntcu";
 
     public static void Main(string[] args)
     {
-        CalculateDistances("Dados/TextoClaro.txt");
+        CalculateLanguage("Dados/TextoClaro.txt");
     }
 
-    public static double CalculateDistances(string fileName)
+    public static string CalculateLanguage(string fileName)
     {
-        var letterFrequencies = new ConcurrentDictionary<char, int>();
         string text = File.ReadAllText(fileName);
 
+        string mostFrequent = MostFrequentLetters(text);
+        string probableLanguage = ProbableLanguage(mostFrequent);
+        Console.WriteLine($"The text is probably in {probableLanguage}");
+
+        var closestKeyLength = 0;
+        var lastDistance = -1;
+
+        for (int i = 1; i < 26; i++)
+        {
+            
+        }
+
+        return probableLanguage;
+    }
+
+    private static string ProbableLanguage(string mostFrequent)
+    {
+        Console.WriteLine($"Most frequent letters in text {mostFrequent}");
+        double enDistance = mostFrequent.LevenshteinDistance(enMostFreq);
+        double ptDistance = mostFrequent.LevenshteinDistance(ptMostFreq);
+        Console.WriteLine($"distance to english: {enDistance}");
+        Console.WriteLine($"distance to portuguese: {ptDistance}");
+        return enDistance < ptDistance ? "english" : "portuguese";
+    }
+
+    private static string MostFrequentLetters(string text)
+    {
+        var letterFrequencies = new ConcurrentDictionary<char, int>();
         Parallel.For(0, text.Length, i => { letterFrequencies.AddOrUpdate(text[i], 1, (_, v) => v + 1); });
 
-        var textFrequencies = new List<double>();
-        foreach (var letter in alphabet)
+        var textFrequencies = new List<LetterFrequency>();
+        foreach (var letterFrequency in letterFrequencies)
         {
-            textFrequencies.Add(letterFrequencies[letter] / (double)text.Length);
-            Console.WriteLine($"{letter} - {letterFrequencies[letter] / (double)text.Length}");
+            textFrequencies.Add(new LetterFrequency
+            {
+                Letter = letterFrequency.Key,
+                Frequency = letterFrequency.Value
+            });
         }
 
-        return 0;
-    }
+        textFrequencies.Sort((x, y) => y.Frequency.CompareTo(x.Frequency));
+        Console.WriteLine(string.Join('\n', textFrequencies));
 
-    public static int GCD(List<int> numbers)
-    {
-        int result = numbers[0];
-        for (var i = 1; i < numbers.Count; i++)
+        var mostFrequent = new StringBuilder();
+        for (int i = 0; i < 12; i++)
         {
-            result = GCD(result, numbers[i]);
+            mostFrequent.Append(textFrequencies[i].Letter);
         }
 
-        return result;
-    }
-
-    public static int GCD(int a, int b)
-    {
-        while (b > 0)
-        {
-            int temp = b;
-            b = a % b;
-            a = temp;
-        }
-
-        return a;
+        return mostFrequent.ToString();
     }
 }

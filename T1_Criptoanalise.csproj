@@ -112,4 +112,8 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="FuzzyStrings.NetStandard" Version="1.0.1" />
+    </ItemGroup>
+
 </Project>
