@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.Text;
 using DuoVia.FuzzyStrings;
 
@@ -29,13 +30,19 @@ public class Program
 
     public static void Main(string[] args)
     {
-        CalculateLanguage("Dados/TextoClaro.txt");
-    }
-
-    public static string CalculateLanguage(string fileName)
-    {
+        var fileName = "Dados/Teste.txt";
         string text = File.ReadAllText(fileName);
 
+        var columns = SplitText(text, 3);
+        foreach (var column in columns)
+        {
+            Console.WriteLine(column);
+        }
+    }
+
+    public static string CalculateLanguage(string text)
+    {
+        var teste = SplitText(text, 3);
         string mostFrequent = MostFrequentLetters(text);
         string probableLanguage = ProbableLanguage(mostFrequent);
         Console.WriteLine($"The text is probably in {probableLanguage}");
@@ -43,9 +50,10 @@ public class Program
         var closestKeyLength = 0;
         var lastDistance = -1;
 
-        for (int i = 1; i < 26; i++)
+        Console.WriteLine("Text divided:");
+        foreach (var str in teste)
         {
-            
+            Console.WriteLine(str);
         }
 
         return probableLanguage;
@@ -86,5 +94,17 @@ public class Program
         }
 
         return mostFrequent.ToString();
+    }
+
+    private static ConcurrentBag<string> SplitText(string text, int keyLength)
+    {
+        var result = new ConcurrentBag<string>();
+        Parallel.For(0, text.Length / keyLength, i =>
+        {
+            var index = i * keyLength;
+            result.Add(text[index..(index + keyLength)]);
+        });
+
+        return result;
     }
 }
