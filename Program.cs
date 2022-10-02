@@ -5,16 +5,30 @@ using DuoVia.FuzzyStrings;
 
 namespace T1_Criptoanalise;
 
+public enum Language
+{
+    En,
+    Pt
+}
+
 public class Program
 {
-    class LetterFrequency : IComparable<LetterFrequency>
+    private static string Alphabet { get; } = "abcdefghijklmnopqrstuvwxyz";
+    private static string MostFrequentLettersEn { get; } = "etaoinshrdlu";
+    private static string MostFrequentLettersPt { get; } = "aeosridmntcu";
+    private static double CoincidenceIndexEn = 0.0661;
+    private static double CoincidenceIndexPt = 0.0738;
+    private static double CoincidenceIndexRandom = 0.0385;
+    private static int MaxKeyLength { get; } = 26;
+
+    private class LetterFrequency : IComparable<LetterFrequency>
     {
         public char Letter { get; set; }
         public int Frequency { get; set; }
 
-        public int CompareTo(LetterFrequency other)
+        public int CompareTo(LetterFrequency? other)
         {
-            return other.Frequency.CompareTo(Frequency);
+            return other!.Frequency.CompareTo(Frequency);
         }
 
         public override string ToString()
@@ -23,72 +37,74 @@ public class Program
         }
     }
 
-    public static string alphabet = "abcdefghijklmnopqrstuvwxyz";
-
-    public static string enMostFreq = "etaoinshrdlu";
-    public static string ptMostFreq = "aeosridmntcu";
-
     public static void Main(string[] args)
     {
-        var fileName = "Dados/Teste.txt";
-        string text = File.ReadAllText(fileName);
+        string text = File.ReadAllText("Dados/Textos cifrados/cipher1.txt");
 
-        var columns = SplitText(text, 3);
-        foreach (var column in columns)
+        RunAuto(text);
+    }
+
+    private static void RunAuto(string text)
+    {
+        //var frequency = GetLetterFrequency(text);
+        //var language = GetLanguage(frequency);
+        var language = Language.Pt;
+        Console.WriteLine(language);
+
+        var keyLength = 0;
+        var closest = 0;
+        var coincidenceIndex = new double[MaxKeyLength];
+        for (int i = 0; i < MaxKeyLength; i++)
         {
-            Console.WriteLine(column);
+            var split
+            coincidenceIndex[i]= GetCoincidenceIndex();
         }
     }
-
-    public static string CalculateLanguage(string text)
+    
+    private static double GetCoincidenceIndex(ICollection<string> brokenText)
     {
-        var teste = SplitText(text, 3);
-        string mostFrequent = MostFrequentLetters(text);
-        string probableLanguage = ProbableLanguage(mostFrequent);
-        Console.WriteLine($"The text is probably in {probableLanguage}");
-
-        var closestKeyLength = 0;
-        var lastDistance = -1;
-
-        Console.WriteLine("Text divided:");
-        foreach (var str in teste)
+        var result = 0.0;
+        var coincidenceIndexes = new ConcurrentBag<double>();
+        Parallel.ForEach(brokenText, (subStr) =>
         {
-            Console.WriteLine(str);
-        }
-
-        return probableLanguage;
-    }
-
-    private static string ProbableLanguage(string mostFrequent)
-    {
-        Console.WriteLine($"Most frequent letters in text {mostFrequent}");
-        double enDistance = mostFrequent.LevenshteinDistance(enMostFreq);
-        double ptDistance = mostFrequent.LevenshteinDistance(ptMostFreq);
-        Console.WriteLine($"distance to english: {enDistance}");
-        Console.WriteLine($"distance to portuguese: {ptDistance}");
-        return enDistance < ptDistance ? "english" : "portuguese";
-    }
-
-    private static string MostFrequentLetters(string text)
-    {
-        var letterFrequencies = new ConcurrentDictionary<char, int>();
-        Parallel.For(0, text.Length, i => { letterFrequencies.AddOrUpdate(text[i], 1, (_, v) => v + 1); });
-
-        var textFrequencies = new List<LetterFrequency>();
-        foreach (var letterFrequency in letterFrequencies)
-        {
-            textFrequencies.Add(new LetterFrequency
+            var letterFrequency = GetLetterFrequency(subStr);
+            var subStrCoincidenceIndexes = new ConcurrentBag<double>();
+            Parallel.ForEach(Alphabet, (letter) =>
             {
-                Letter = letterFrequency.Key,
-                Frequency = letterFrequency.Value
+                subStrCoincidenceIndexes.Add();
             });
-        }
+            coincidenceIndexes.Add();
+        });
+        return result/brokenText.Count;
+    }
 
+    private static Language GetLanguage(IDictionary<char, int> letterFrequencies)
+    {
+        //Get a string with the first (most relevant) most frequent letters.
+        string mostFrequent = GetMostFrequentLetters(letterFrequencies);
+        Console.WriteLine($"Most frequent letters in text {mostFrequent}");
+
+        //Use Levenshtein distance to calculate how close the most frequent letters are to the most frequent letters of each language.
+        double distanceToEn = mostFrequent.LevenshteinDistance(MostFrequentLettersEn);
+        double distanceToPt = mostFrequent.LevenshteinDistance(MostFrequentLettersPt);
+        Console.WriteLine($"Distance to english: {distanceToEn}");
+        Console.WriteLine($"Distance to portuguese: {distanceToPt}");
+
+        return distanceToEn < distanceToPt ? Language.En : Language.Pt;
+    }
+
+    private static string GetMostFrequentLetters(IDictionary<char, int> letterFrequencies)
+    {
+        //Take each letter frequency, add to list, and order by most frequent.
+        var textFrequencies = new List<LetterFrequency>();
+        Parallel.ForEach(letterFrequencies,
+            pair => { textFrequencies.Add(new LetterFrequency { Letter = pair.Key, Frequency = pair.Value }); });
         textFrequencies.Sort((x, y) => y.Frequency.CompareTo(x.Frequency));
-        Console.WriteLine(string.Join('\n', textFrequencies));
 
-        var mostFrequent = new StringBuilder();
-        for (int i = 0; i < 12; i++)
+        //Take the 12 most frequent letters or less. (We will use these later to see how close they are with the most frequent letters in english and portuguese.)
+        StringBuilder mostFrequent = new();
+        int limit = textFrequencies.Count < 12 ? textFrequencies.Count : 12;
+        for (var i = 0; i < limit; i++)
         {
             mostFrequent.Append(textFrequencies[i].Letter);
         }
@@ -96,12 +112,20 @@ public class Program
         return mostFrequent.ToString();
     }
 
+    private static ConcurrentDictionary<char, int> GetLetterFrequency(string text)
+    {
+        var letterFrequencies = new ConcurrentDictionary<char, int>();
+        Parallel.For(0, text.Length, i => { letterFrequencies.AddOrUpdate(text[i], 1, (_, v) => v + 1); });
+        return letterFrequencies;
+    }
+
     private static ConcurrentBag<string> SplitText(string text, int keyLength)
     {
+        
         var result = new ConcurrentBag<string>();
         Parallel.For(0, text.Length / keyLength, i =>
         {
-            var index = i * keyLength;
+            int index = i * keyLength;
             result.Add(text[index..(index + keyLength)]);
         });
 
