@@ -18,7 +18,6 @@ public class Program
     private static string MostFrequentLettersPt { get; } = "aeosridmntcu";
     private static double CoincidenceIndexEn = 0.0661;
     private static double CoincidenceIndexPt = 0.0738;
-    private static double CoincidenceIndexRandom = 0.0385;
     private static int MaxKeyLength { get; } = 26;
 
     private class LetterFrequency : IComparable<LetterFrequency>
@@ -44,6 +43,18 @@ public class Program
         RunAuto(text);
     }
 
+    public static void RunLevenshtein(string text)
+    {
+        var language = Language.Pt;
+
+        var targetMostFrequent = language == Language.Pt ? MostFrequentLettersPt : MostFrequentLettersEn;
+
+        var keyLength = 0;
+        var bestDistance = int.MaxValue;
+
+        
+    }
+
     private static void RunAuto(string text)
     {
         //var frequency = GetLetterFrequency(text);
@@ -51,31 +62,47 @@ public class Program
         var language = Language.Pt;
         Console.WriteLine(language);
 
+        var targetCoincidenceIndex = language == Language.Pt ? CoincidenceIndexPt : CoincidenceIndexEn;
+
         var keyLength = 0;
-        var closest = 0;
-        var coincidenceIndex = new double[MaxKeyLength];
-        for (int i = 0; i < MaxKeyLength; i++)
+        var closest = 0.0;
+        var coincidenceIndexes = new double[MaxKeyLength];
+        Parallel.For(0, MaxKeyLength,
+            i => { coincidenceIndexes[i] = GetAverageCoincidenceIndex(SplitText(text, i + 1)); });
+
+        for (var i = 0; i < MaxKeyLength; i++)
         {
-            var split
-            coincidenceIndex[i]= GetCoincidenceIndex();
-        }
-    }
-    
-    private static double GetCoincidenceIndex(ICollection<string> brokenText)
-    {
-        var result = 0.0;
-        var coincidenceIndexes = new ConcurrentBag<double>();
-        Parallel.ForEach(brokenText, (subStr) =>
-        {
-            var letterFrequency = GetLetterFrequency(subStr);
-            var subStrCoincidenceIndexes = new ConcurrentBag<double>();
-            Parallel.ForEach(Alphabet, (letter) =>
+            if (Math.Abs(targetCoincidenceIndex - coincidenceIndexes[i]) < Math.Abs(targetCoincidenceIndex - closest))
             {
-                subStrCoincidenceIndexes.Add();
-            });
-            coincidenceIndexes.Add();
-        });
-        return result/brokenText.Count;
+                closest = coincidenceIndexes[i];
+                keyLength = i + 1;
+            }
+        }
+
+        Console.WriteLine($"Key length = {keyLength}");
+
+        return;
+    }
+
+    private static double GetAverageCoincidenceIndex(ConcurrentBag<char>[] separatedText)
+    {
+        var coincidenceIndexes = new ConcurrentBag<double>();
+
+        Parallel.For(0, separatedText.Length, i => { coincidenceIndexes.Add(GetCoincidenceIndex(separatedText[i])); });
+
+        return coincidenceIndexes.Sum() / separatedText.Length;
+    }
+
+    private static double GetCoincidenceIndex(ConcurrentBag<char> text)
+    {
+        var frequencies = GetLetterFrequency(text);
+        var coincidenceIndex = 0.0;
+        foreach (int letterFrequency in frequencies.Values)
+        {
+            coincidenceIndex += letterFrequency * (letterFrequency - 1);
+        }
+
+        return coincidenceIndex / ((double)text.Count * (text.Count - 1));
     }
 
     private static Language GetLanguage(IDictionary<char, int> letterFrequencies)
@@ -112,22 +139,18 @@ public class Program
         return mostFrequent.ToString();
     }
 
-    private static ConcurrentDictionary<char, int> GetLetterFrequency(string text)
+    private static ConcurrentDictionary<char, int> GetLetterFrequency(IEnumerable<char> text)
     {
         var letterFrequencies = new ConcurrentDictionary<char, int>();
-        Parallel.For(0, text.Length, i => { letterFrequencies.AddOrUpdate(text[i], 1, (_, v) => v + 1); });
+        Parallel.ForEach(text, (c) => { letterFrequencies.AddOrUpdate(c, 1, (_, v) => v + 1); });
         return letterFrequencies;
     }
 
-    private static ConcurrentBag<string> SplitText(string text, int keyLength)
+    private static ConcurrentBag<char>[] SplitText(string text, int keyLength)
     {
-        
-        var result = new ConcurrentBag<string>();
-        Parallel.For(0, text.Length / keyLength, i =>
-        {
-            int index = i * keyLength;
-            result.Add(text[index..(index + keyLength)]);
-        });
+        var result = new ConcurrentBag<char>[keyLength];
+        Parallel.For(0, result.Length, i => { result[i] = new ConcurrentBag<char>(); });
+        Parallel.For(0, text.Length, i => { result[i % keyLength].Add(text[i]); });
 
         return result;
     }
